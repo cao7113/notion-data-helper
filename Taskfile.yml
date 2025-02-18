@@ -1,0 +1,16 @@
+# https://taskfile.dev/usage/
+version: '3'
+tasks:
+  default: bun dev
+  repl: bun repl
+
+  envs: bun --print process.env
+
+  try: |
+    curl -X POST http://localhost:3000/isbn/9787115424914
+
+  setup: |
+    bun add hono @notionhq/client axios
+    
+    # use bun env
+    # bun install @dotenvx/dotenvx -g

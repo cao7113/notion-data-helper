@@ -1,0 +1,14 @@
+{
+  "name": "notion-booker",
+  "scripts": {
+    "dev": "bun run --hot src/index.ts"
+  },
+  "dependencies": {
+    "@notionhq/client": "^2.2.15",
+    "axios": "^1.7.9",
+    "hono": "^4.7.1"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.2"
+  }
+}
