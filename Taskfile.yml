@@ -5,29 +5,29 @@ tasks:
   dev: bun run dev
   repl: bun repl
 
+  books: |
+    curl -v -H "Authorization: Bearer dogoodjob" http://localhost:3000/books?pageSize=3 | jq
+  books-hi: |
+    curl -v -H "Authorization: Bearer dogoodjob" http://localhost:3000/books/hi | jq
+  book-post: |
+    # curl -X POST http://localhost:3000/isbn/9787115424914
+    curl -X POST http://localhost:3000/books/isbn/9787030758880
+
+  ## Cloudflare workers
   cf-dev: bun run cf-dev
   cf: task cf-dev
   dep: bun run cf-dep
-  secrets: bunx wrangler secret list
+  open: open https://notion-data-helper.shareup.workers.dev
+  secrets: |
+    bunx wrangler secret list
+    # bunx wrangler secret put BEARER_AUTH_TOKEN
 
-  try: |
-    # curl -X POST http://localhost:3000/isbn/9787115424914
-    curl -X POST http://localhost:3000/books/isbn/9787030758880
+  ## Tools
   ping: curl -v http://localhost:3000/ping | jq
   timing: curl -v http://localhost:3000/timing?delay=6 | jq
   test-env: |
     curl http://localhost:3000/envs
     curl -H "Authorization: Bearer dogoodjob" http://localhost:3000/envs | jq
-
-    
-  books: |
-    curl -v -H "Authorization: Bearer dogoodjob" http://localhost:3000/books?pageSize=3 | jq
-  books-hi: |
-    curl -v -H "Authorization: Bearer dogoodjob" http://localhost:3000/books/hi | jq
-
-  bt: bunx vitest run src/books/notionApi.test.ts
-
-  ## Tools
   envs: 
     silent: true
     cmds: 

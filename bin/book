@@ -18,10 +18,7 @@ const apiKey = process.env.NOTION_API_KEY;
 if (!apiKey) {
   throw new Error("NOTION_API_KEY is not defined");
 }
-const rootPageId = process.env.NOTION_ROOT_PAGE_ID;
-if (!rootPageId) {
-  throw new Error("NOTION_ROOT_PAGE_ID is not defined");
-}
+
 const notion = new NotionApi(apiKey);
 const sampleDbId = process.env.NOTION_DATABASE_ID;
 const demoISNB = "9787115424914";
@@ -103,13 +100,24 @@ program
 program
   .command("create-db")
   .alias("c")
-  .description("create books db")
+  .description("Create books db")
   .argument("[string]", "db title")
-  .action(async (title, _opts) => {
+  .option(
+    "-p, --parentid <string>",
+    "parent page id to create new sub-db, NOTE: should connected to Notion data-helper integration!",
+    "1af673e59ab680338679c433c9a6dfb6"
+  )
+  .action(async (title, opts) => {
     title = title || "books-store";
-    const resp = await notion.createBooksDb(title, rootPageId);
-    const url = resp["url"];
-    console.log(`books-db: ${title} created at ${url}`);
+    const parentPageId = opts.parentid;
+    console.log(`Crating new sub-db under parent: ${parentPageId}`);
+    try {
+      const resp = await notion.createBooksDb(title, parentPageId);
+      const url = resp["url"];
+      console.log(`books-db: ${title} created at ${url}`);
+    } catch (error) {
+      console.error("Error creating books db:", error.body);
+    }
   });
 
 program
