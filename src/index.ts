@@ -1,52 +1,228 @@
-import { Hono } from "hono";
-import { Client } from "@notionhq/client";
-import { TanshuApi } from "./tanshuApi";
-import { NotionApi } from "./notionApi";
+import { logger } from "hono/logger";
+// import { jwt } from "hono/jwt";
+import type { JwtVariables } from "hono/jwt";
+import { env, getRuntimeKey } from "hono/adapter";
+import { timing, setMetric, startTime, endTime } from "hono/timing";
+// NOTE: The z object should be imported from @hono/zod-openapi other than from hono
+import { z, createRoute, OpenAPIHono } from "@hono/zod-openapi";
+import { swaggerUI } from "@hono/swagger-ui";
+// import { serve } from "@hono/node-server";
+import books from "./books/index";
+import { bearerMiddleware } from "./auth";
 
-// read envs
-const tanshuApiKey = process.env.TANSHU_API_KEY!;
-const notionApiKey = process.env.NOTION_API_KEY!;
-const notionDatabaseId = process.env.NOTION_DATABASE_ID!;
+const app = new OpenAPIHono<{
+  // Specify the variable types to infer the `c.get('jwtPayload')`:
+  Variables: JwtVariables;
+  Bindings: CloudflareBindings;
+}>();
 
-const app = new Hono();
-const notion = new NotionApi(notionApiKey);
-
-app.get("/", (ctx) => {
-  return ctx.json({
-    message: "Hello booker, only /isbn/:isbn available now!",
-  });
+app.openAPIRegistry.registerComponent("securitySchemes", "Bearer", {
+  type: "http",
+  scheme: "bearer",
 });
+// app.openAPIRegistry.registerComponent("securitySchemes", "JWT", {
+//   type: "http",
+//   scheme: "bearer",
+//   bearerFormat: "JWT",
+// })
 
-app.post("/isbn/:isbn", async (ctx) => {
-  const isbn = ctx.req.param("isbn");
-  if (!isbn) {
-    return ctx.json({ error: "ISBN path param is required" }, 400);
-  }
+app.use(logger(), timing());
 
-  // check if book already exist
-  const check = await notion.isBookExists(isbn, notionDatabaseId);
-  if (check) {
-    return ctx.json({ error: "Book already exists" }, 409);
-  }
+app.use("/books/*", bearerMiddleware);
+app.route("/books", books);
 
-  try {
-    const bookData = await TanshuApi.getBookInfo(isbn, tanshuApiKey);
-
-    if (!bookData) {
-      return ctx.json({ error: "Book not found or API error" }, 404);
+app
+  // ping-pong
+  .openapi(
+    createRoute({
+      tags: ["Tools"],
+      summary: "Ping Pong",
+      method: "get",
+      path: "/ping",
+      request: {},
+      responses: {
+        200: {
+          description: "Success message",
+        },
+      },
+    }),
+    (c) => {
+      return c.json({
+        message: "Pong",
+      });
     }
+  )
+  // timing-test
+  .openapi(
+    createRoute({
+      tags: ["Tools"],
+      summary: "timing delay test",
+      method: "get",
+      path: "/timing",
+      request: {
+        query: z.object({
+          delay: z.coerce
+            .number()
+            .int()
+            .min(0)
+            .max(60000)
+            .default(5)
+            .openapi({
+              param: {
+                name: "delay",
+                in: "query",
+              },
+              example: 5,
+              default: 5,
+            }),
+        }),
+      },
+      responses: {
+        200: {
+          description: "Success message",
+        },
+      },
+    }),
+    async (c) => {
+      // Cloudflare Free Plan: 10ms CPU time per request.
+      const { delay } = c.req.valid("query");
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      return c.json({
+        msg: `delay ${delay} ms`,
+        delay: delay,
+      });
+    }
+  )
+  // env-test
+  .openapi(
+    createRoute({
+      tags: ["Tools"],
+      summary: "ENV test",
+      method: "get",
+      path: "/envs",
+      request: {},
+      security: [
+        {
+          Bearer: [],
+        },
+      ],
+      middleware: bearerMiddleware,
+      responses: {
+        200: {
+          description: "Success message",
+        },
+      },
+    }),
+    (c) => {
+      // https://hono.dev/docs/helpers/adapter
+      // NAME is process.env.NAME on Node.js or Bun
+      // NAME is the value written in `wrangler.toml` on Cloudflare
+      const { TEST_ONLY_ENV } = env<{ TEST_ONLY_ENV: string }>(c);
+      return c.json({
+        TEST_ONLY_ENV,
+        runtime: getRuntimeKey(),
+        test_only_env: TEST_ONLY_ENV,
+      });
+    }
+  )
+  // bad mock
+  .openapi(
+    createRoute({
+      tags: ["Tools"],
+      summary: "Mock bad request",
+      method: "get",
+      path: "/bad",
+      request: {
+        query: z.object({
+          code: z.coerce
+            .number()
+            .int()
+            .min(400)
+            .max(499)
+            .default(400)
+            .openapi({
+              param: {
+                name: "code",
+                in: "query",
+              },
+              example: 400,
+              default: 400,
+            }),
+        }),
+      },
+      security: [
+        {
+          Bearer: [],
+        },
+      ],
+      middleware: bearerMiddleware,
+      responses: {
+        200: {
+          description: "Success message",
+        },
+        400: {
+          description: "Error message",
+        },
+      },
+    }),
+    (c) => {
+      const { code } = c.req.valid("query");
 
-    const page = await notion.createBookPage(notionDatabaseId, bookData);
-    return ctx.json({
-      message: `Book added to Notion successfully with url ${page.url}`,
-    });
-  } catch (error) {
-    console.error("Error:", error);
-    return ctx.json(
-      { error: "An error occurred while processing your request" },
-      500
-    );
-  }
-});
+      return c.json(
+        {
+          error: `Bad request code=${code}`,
+        },
+        { status: code }
+      );
+    }
+  );
 
-export default app;
+app.doc31("/openapi", (c) => ({
+  openapi: "3.1.0",
+  info: {
+    title: "Notion Data Helper API Docs",
+    version: "1",
+    description: "More description here...",
+  },
+  servers: [
+    {
+      url: new URL(c.req.url).origin,
+      description: "Current environment",
+    },
+  ],
+}));
+app.get("/", swaggerUI({ url: "/openapi", title: "API Docs" }));
+
+// console.log(JSON.stringify(app, null, 2));
+
+const runtime = getRuntimeKey();
+console.log(`Runtime: ${runtime}`);
+
+let finalApp;
+
+switch (runtime) {
+  case "bun":
+    // https://hono.dev/docs/getting-started/bun#change-port-number
+    finalApp = {
+      fetch: app.fetch,
+      idleTimeout: 30, // idle timeout in seconds
+      // port: 3000,
+    };
+    break;
+  case "workerd": // production
+    // https://chatgpt.com/c/67d0dd7c-d22c-8003-bc8b-db6b9037cbe3
+    finalApp = app;
+    break;
+  case "node": // test in node by vitest
+    // https://hono.dev/docs/getting-started/nodejs
+    // finalApp = serve({
+    //   fetch: app.fetch,
+    //   port: 3000,
+    // });
+    finalApp = app;
+    break;
+  default:
+    throw new Error(`Unsupported runtime: ${runtime}`);
+}
+
+export default finalApp;

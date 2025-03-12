@@ -1,0 +1,126 @@
+#! /usr/bin/env bun
+import { Command } from "commander";
+import { z } from "zod";
+import NotionApi from "../src/books/notionApi";
+// import {boo} from "../src/books/notionApi";
+import TanshuApi from "../src/books/tanshuApi";
+
+const version = "0.0.1";
+
+// https://github.com/tj/commander.js?tab=readme-ov-file#commanderjs
+const program = new Command()
+  .name("book")
+  .description("Notioner books CLI")
+  .version(version);
+
+// const apiKey = process.env.NOTION_API_KEY!;
+const apiKey = process.env.NOTION_API_KEY;
+if (!apiKey) {
+  throw new Error("NOTION_API_KEY is not defined");
+}
+const rootPageId = process.env.NOTION_ROOT_PAGE_ID;
+if (!rootPageId) {
+  throw new Error("NOTION_ROOT_PAGE_ID is not defined");
+}
+const notion = new NotionApi(apiKey);
+const sampleDbId = process.env.NOTION_DATABASE_ID;
+const demoISNB = "9787115424914";
+const tanshuApiKey = process.env.TANSHU_API_KEY;
+if (!tanshuApiKey) {
+  throw new Error("TANSHU_API_KEY is not defined");
+}
+const tsClient = new TanshuApi(tanshuApiKey);
+
+program
+  .command("list")
+  .alias("ls")
+  .description("list books")
+  .argument("[string]", "db-id")
+  .option("-l, --limit <number>", "limit", 3)
+  .action(async (dbId, opts) => {
+    dbId = dbId || sampleDbId;
+    const limit = z.coerce.number().int().min(1).parse(opts.limit);
+    const resp = await notion.listBookPages(dbId, limit);
+    console.log(resp);
+  });
+
+program
+  .command("query")
+  .alias("q")
+  .description("query books")
+  .argument("[string]", "db-id")
+  .option("-l, --limit <number>", "limit", 3)
+  .action(async (dbId, _opts) => {
+    dbId = dbId || sampleDbId;
+    const limit = z.coerce.number().int().min(1).parse(opts.limit);
+    const resp = await notion.queryBookPages(dbId, limit);
+    console.log(resp);
+  });
+
+program
+  .command("query-isbn")
+  .alias("isbn")
+  .description("query book by isbn")
+  .option("-d, --dbid <string>", "db id", sampleDbId)
+  .argument("[string]", "isbn")
+  .action(async (isbn, opts) => {
+    isbn = isbn || "9787115424914";
+    const resp = await notion.queryBookPagesByISBN(isbn, opts.dbid);
+    const data = JSON.stringify(resp, null, 2);
+    console.log(data);
+  });
+
+program
+  .command("create-book")
+  .description("create book-page")
+  .argument("[string]", "isbn")
+  .option("-d, --dbid <string>", "db id", sampleDbId)
+  .action(async (isbn, opts) => {
+    isbn = isbn || demoISNB;
+    const bookInfo = await tsClient.getBookInfo(isbn);
+    if (bookInfo.ok) {
+      const resp = await notion.createBookPage(opts.dbid, bookInfo.data);
+      const url = resp["url"];
+      console.log(`books-page for isbn ${isbn} created at ${url}`);
+    }
+  });
+
+program
+  .command("get-book")
+  .description("get book-page by isbn")
+  .argument("[string]", "isbn")
+  .option("-d, --dbid <string>", "db id", sampleDbId)
+  .action(async (isbn, opts) => {
+    isbn = isbn || demoISNB;
+    const book = await notion.findPrettyBookPageByISBN(isbn, opts.dbid);
+    if (book) {
+      console.log(JSON.stringify(book, null, 2));
+    } else {
+      console.log(`Not found book for isbn: ${isbn}`);
+    }
+  });
+
+program
+  .command("create-db")
+  .alias("c")
+  .description("create books db")
+  .argument("[string]", "db title")
+  .action(async (title, _opts) => {
+    title = title || "books-store";
+    const resp = await notion.createBooksDb(title, rootPageId);
+    const url = resp["url"];
+    console.log(`books-db: ${title} created at ${url}`);
+  });
+
+program
+  .command("show-db")
+  .alias("v")
+  .description("show books db schema")
+  .argument("[string]", "db-id")
+  .action(async (dbId, _opts) => {
+    dbId = dbId || sampleDbId;
+    const db = await notion.getDb(dbId);
+    console.log(db);
+  });
+
+program.parse();

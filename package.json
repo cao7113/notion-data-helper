@@ -1,14 +1,24 @@
 {
-  "name": "notion-booker",
+  "name": "notion-data-helper",
   "scripts": {
-    "dev": "bun run --hot src/index.ts"
+    "dev": "bun run --hot src/index.ts",
+    "test": "vitest run --watch=false",
+    "cf-dev": "wrangler dev",
+    "cf-dep": "wrangler deploy --minify",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings"
   },
   "dependencies": {
-    "@notionhq/client": "^2.2.15",
-    "axios": "^1.7.9",
-    "hono": "^4.7.1"
+    "@hono/node-server": "^1.13.8",
+    "@hono/swagger-ui": "^0.5.1",
+    "@hono/zod-openapi": "^0.19.2",
+    "@notionhq/client": "^2.2.16",
+    "commander": "^13.1.0",
+    "hono": "^4.7.4"
   },
   "devDependencies": {
-    "@types/bun": "^1.2.2"
+    "@cloudflare/workers-types": "^4.20250303.0",
+    "@types/bun": "^1.2.4",
+    "vitest": "^3.0.8",
+    "wrangler": "^3.114.0"
   }
 }

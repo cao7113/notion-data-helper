@@ -1,0 +1,19 @@
+{
+  "code": 1,
+  "msg": "操作成功",
+  "data": {
+    "title": "图解密码技术",
+    "img": "http://static1.showapi.com/app2/isbn/imgs/72868dd64dcd404e92f19d6f21ee9c71.jpg",
+    "author": "结城浩",
+    "isbn": "9787115424914",
+    "publisher": "人民邮电出版社",
+    "pubdate": "2016-06",
+    "pubplace": "",
+    "pages": "402",
+    "price": "89.00",
+    "binding": "平装",
+    "edition": "",
+    "format": "16开",
+    "summary": "本书以图配文的形式..."
+  }
+}

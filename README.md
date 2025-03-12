@@ -1,11 +1,3 @@
-To install dependencies:
-```sh
-bun install
-```
+# Notion Data Helper
 
-To run:
-```sh
-bun run dev
-```
-
-open http://localhost:3000
+My Notion Store Helper
