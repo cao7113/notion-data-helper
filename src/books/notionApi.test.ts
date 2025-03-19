@@ -119,7 +119,7 @@ describe("create book-page", () => {
   test("ok", async () => {
     const notion = new NotionApi("test-key");
     const resp = await notion.createBookPage("test-database-id", demoBookData);
-    expect(resp).toEqual(firstBookPage);
+    expect(resp).toEqual(firstPrettyBookPage);
   });
 });
 

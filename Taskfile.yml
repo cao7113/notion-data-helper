@@ -13,6 +13,14 @@ tasks:
     # curl -X POST http://localhost:3000/isbn/9787115424914
     curl -X POST http://localhost:3000/books/isbn/9787030758880
 
+  ## bun prod
+  prod: |
+    bun run build
+    bun run dist/index.js
+
+  ## Fly.io
+  f-who: fly auth whoami
+
   ## Cloudflare workers
   cf-dev: bun run cf-dev
   cf: task cf-dev

@@ -107,13 +107,14 @@ export const app = new OpenAPIHono<{
       const { isbn } = c.req.valid("param");
       const notionClient: NotionApi = c.get("notionClient");
       const notionDatabaseId = c.get("current-db-id");
-      const found = await notionClient.findBookPageByISBN(
+      const found = await notionClient.findPrettyBookPageByISBN(
         isbn,
         notionDatabaseId
       );
 
       if (found) {
-        return c.json({ msg: `Book found at ${found?.url}` });
+        console.log(`Book found at ${found?.url}`);
+        return c.json(found);
       }
 
       const tsClient: TanshuApi = c.get("tsClient");
@@ -178,6 +179,47 @@ export const app = new OpenAPIHono<{
       } else {
         return c.json({ error: "Book not found" }, 404);
       }
+    }
+  )
+  // get remote book-info
+  .openapi(
+    createRoute({
+      summary: "Get remote book info by isbn",
+      tags: ["Books"],
+      method: "get",
+      path: "/remote/isbn/{isbn}",
+      request: {
+        params: z.object({
+          isbn: z
+            .string()
+            .min(10)
+            .max(13)
+            .openapi({
+              param: {
+                name: "isbn",
+                in: "path",
+              },
+              example: "9787115424914",
+            }),
+        }),
+      },
+      security: [
+        {
+          Bearer: [],
+        },
+      ],
+      middleware: [addClients],
+      responses: {
+        200: {
+          description: "Success message",
+        },
+      },
+    }),
+    async (c) => {
+      const { isbn } = c.req.valid("param");
+      const tsClient: TanshuApi = c.get("tsClient");
+      const bookInfo = await tsClient.getBookInfo(isbn);
+      return c.json(bookInfo);
     }
   )
   // welcome

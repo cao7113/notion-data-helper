@@ -38,7 +38,7 @@ export function getPagePropItemValue(
     case "url":
       return val;
     case "date":
-      return val.start;
+      return val?.start;
     default:
       return val;
   }
@@ -162,7 +162,7 @@ export default class NotionApi {
     this.client = new Client({
       auth: apiKey,
       timeoutMs: 10_000,
-      logLevel: LogLevel.DEBUG,
+      logLevel: LogLevel.INFO,
     });
   }
 
@@ -238,18 +238,16 @@ export default class NotionApi {
     return results.length > 0;
   }
 
-  async createBookPage(
-    databaseId: string,
-    bookData: BookData
-  ): Promise<CreatePageResponse> {
+  async createBookPage(databaseId: string, bookData: BookData) {
     // first check exist???
     const properties = bookDataToBookPageProps(bookData);
-    return await this.client.pages.create({
+    const pageResp = await this.client.pages.create({
       parent: {
         database_id: databaseId,
       },
       properties,
     });
+    return getPageInfo(pageResp as PageObjectResponse);
   }
 
   async updateBookPage(pageId: string, bookData: BookData) {

@@ -1,7 +1,10 @@
 {
   "name": "notion-data-helper",
   "scripts": {
+    "start": "bun run src/index.ts",
     "dev": "bun run --hot src/index.ts",
+    "build": "bun build src/index.ts --outdir dist --minify",
+    "prod": "bun run dist/index.js",
     "test": "vitest run --watch=false",
     "cf-dev": "wrangler dev",
     "cf-dep": "wrangler deploy --minify",

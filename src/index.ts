@@ -177,20 +177,26 @@ app
     }
   );
 
-app.doc31("/openapi", (c) => ({
-  openapi: "3.1.0",
-  info: {
-    title: "Notion Data Helper API Docs",
-    version: "1",
-    description: "More description here...",
-  },
-  servers: [
-    {
-      url: new URL(c.req.url).origin,
-      description: "Current environment",
+app.doc31("/openapi", (c) => {
+  let origin = new URL(c.req.url).origin;
+  if (origin.includes(".fly.dev") && origin.startsWith("http://")) {
+    origin = origin.replace("http://", "https://");
+  }
+  return {
+    openapi: "3.1.0",
+    info: {
+      title: "Notion Data Helper API Docs",
+      version: "0.0.1",
+      description: "More description here...",
     },
-  ],
-}));
+    servers: [
+      {
+        url: origin,
+        description: "Current",
+      },
+    ],
+  };
+});
 app.get("/", swaggerUI({ url: "/openapi", title: "API Docs" }));
 
 // console.log(JSON.stringify(app, null, 2));
@@ -202,11 +208,14 @@ let finalApp;
 
 switch (runtime) {
   case "bun":
+    const port = process.env.FLY_APP_NAME
+      ? Number(process.env.PORT ?? 8080)
+      : 3000;
     // https://hono.dev/docs/getting-started/bun#change-port-number
     finalApp = {
       fetch: app.fetch,
       idleTimeout: 30, // idle timeout in seconds
-      // port: 3000,
+      port: port,
     };
     break;
   case "workerd": // production

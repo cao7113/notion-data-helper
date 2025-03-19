@@ -5,9 +5,22 @@ import TanshuApi from "./tanshuApi";
 import demoBookPage from "../../test/demo-book-page.json";
 import bookPagesResp from "../../test/notion-book-pages-resp.json";
 import tsDemoBookResp from "../../test/tanshu-demo-book-resp.json";
+import {
+  bookDataToBookPageProps,
+  getPagePropItemValue,
+  getPageInfo,
+} from "./notionApi";
+import type {
+  // CreatePageResponse,
+  PageObjectResponse,
+  // CreateDatabaseResponse,
+  // CreateDatabaseParameters,
+} from "@notionhq/client/build/src/api-endpoints";
 
 const mockBookPages = [demoBookPage];
 const firstBookPage = bookPagesResp.results[0];
+const firstPrettyBookPage = getPageInfo(firstBookPage as PageObjectResponse);
+const firstBookPageISBN = getPagePropItemValue(firstBookPage, "ISBN");
 const tsBookData = tsDemoBookResp.data;
 
 // load envs
@@ -75,7 +88,7 @@ describe("Books API Routes", () => {
     const resp = await app.request("/isbn/9787115424914", { method: "POST" });
     expect(resp.status).toBe(200);
     const data = await resp.json();
-    expect(data.msg).toBe(`Book found at ${firstBookPage.url}`);
+    expect(data).toEqual(firstPrettyBookPage);
     expect(findSpy).toHaveBeenCalledTimes(1);
     expect(tsSpy).not.toHaveBeenCalled();
     expect(createSpy).not.toHaveBeenCalled();
