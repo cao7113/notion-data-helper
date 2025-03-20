@@ -197,10 +197,39 @@ app.doc31("/openapi", (c) => {
     ],
   };
 });
-app.get("/", swaggerUI({ url: "/openapi", title: "API Docs" }));
+
+const sui = swaggerUI({
+  url: "/openapi",
+  title: "API Docs",
+  // https://github.com/honojs/middleware/blob/main/packages/swagger-ui/README.md#options
+  manuallySwaggerUIHtml: (asset) => `
+    <div>
+      <div id="swagger-ui"></div>
+      ${asset.css.map((url) => `<link rel="stylesheet" href="${url}" />`)}
+      ${asset.js.map(
+        (url) => `<script src="${url}" crossorigin="anonymous"></script>`
+      )}
+      <script>
+        window.ui = SwaggerUIBundle({
+          url: "/openapi",
+          dom_id: "#swagger-ui",
+          presets: [SwaggerUIBundle.presets.apis],
+          requestInterceptor: (request) => {
+            if (window.location.href.startsWith("http://localhost")) {
+              request.headers["Authorization"] = "Bearer ${
+                process.env.BEARER_AUTH_TOKEN
+              }";
+            }
+            return request;
+          },
+        });
+      </script>
+    </div>
+  `,
+});
+app.get("/", sui);
 
 // console.log(JSON.stringify(app, null, 2));
-
 const runtime = getRuntimeKey();
 console.log(`Runtime: ${runtime}`);
 

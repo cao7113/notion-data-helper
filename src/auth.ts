@@ -6,7 +6,7 @@ export const bearerMiddleware = createMiddleware(async (c, next) => {
   const envs = env(c);
   const token = envs.BEARER_AUTH_TOKEN;
   if (!token) {
-    return c.json({ error: "Invalid bearer token!" }, 500);
+    return c.json({ error: "Invalid bearer token!" }, 401);
   }
 
   const runNext = bearerAuth({

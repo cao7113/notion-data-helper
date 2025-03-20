@@ -23,6 +23,11 @@ export function getPageInfo(page: PageObjectResponse) {
   };
 }
 
+// "2016-06-01T00:00:00.000+00:00" 截取日期部分
+export function parseDate(dateStr: string): string {
+  return dateStr.split("T")[0];
+}
+
 export function getPagePropItemValue(
   page: { properties: any },
   prop: string
@@ -38,7 +43,7 @@ export function getPagePropItemValue(
     case "url":
       return val;
     case "date":
-      return val?.start;
+      return parseDate(val?.start);
     default:
       return val;
   }

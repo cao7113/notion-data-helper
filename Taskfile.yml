@@ -20,6 +20,7 @@ tasks:
 
   ## Fly.io
   f-who: fly auth whoami
+  f-dep: fly deploy --verbose
 
   ## Cloudflare workers
   cf-dev: bun run cf-dev
