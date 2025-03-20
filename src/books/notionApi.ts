@@ -25,7 +25,8 @@ export function getPageInfo(page: PageObjectResponse) {
 
 // "2016-06-01T00:00:00.000+00:00" 截取日期部分
 export function parseDate(dateStr: string): string {
-  return dateStr.split("T")[0];
+  if (!dateStr) return "";
+  return dateStr?.split("T")[0];
 }
 
 export function getPagePropItemValue(
