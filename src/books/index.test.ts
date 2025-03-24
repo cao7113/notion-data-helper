@@ -46,7 +46,9 @@ describe("Books API Routes", () => {
     const listSpy = vi
       .spyOn(NotionApi.prototype, "listBookPages")
       .mockResolvedValue(mockBookPages);
-    const resp = await app.request("/?limit=1", { method: "GET" });
+    const resp = await app.request(`/?limit=1&databaseId=${testDbId}`, {
+      method: "GET",
+    });
     expect(resp.status).toBe(200);
     const data = await resp.json();
     expect(data).toEqual(mockBookPages);
@@ -58,7 +60,10 @@ describe("Books API Routes", () => {
     const findPrettySpy = vi
       .spyOn(NotionApi.prototype, "findPrettyBookPageByISBN")
       .mockResolvedValue(demoBookPage);
-    const resp = await app.request("/isbn/9787115424914", { method: "GET" });
+    const resp = await app.request(
+      `/isbn/9787115424914?databaseId=${testDbId}`,
+      { method: "GET" }
+    );
     expect(resp.status).toBe(200);
     const data = await resp.json();
     expect(data).toEqual(demoBookPage);
@@ -70,7 +75,10 @@ describe("Books API Routes", () => {
     const findPrettySpy = vi
       .spyOn(NotionApi.prototype, "findPrettyBookPageByISBN")
       .mockResolvedValue(null);
-    const resp = await app.request("/isbn/9787115424914", { method: "GET" });
+    const resp = await app.request(
+      `/isbn/9787115424914?databaseId=${testDbId}`,
+      { method: "GET" }
+    );
     expect(resp.status).toBe(404);
     const data: { error: string } = await resp.json();
     expect(data.error).toBe("Book not found");
@@ -85,7 +93,10 @@ describe("Books API Routes", () => {
     const tsSpy = vi.spyOn(TanshuApi.prototype, "getBookInfo");
     const createSpy = vi.spyOn(NotionApi.prototype, "createBookPage");
 
-    const resp = await app.request("/isbn/9787115424914", { method: "POST" });
+    const resp = await app.request(
+      `/isbn/9787115424914?databaseId=${testDbId}`,
+      { method: "POST" }
+    );
     expect(resp.status).toBe(200);
     const data = await resp.json();
     expect(data).toEqual(firstPrettyBookPage);
@@ -105,7 +116,10 @@ describe("Books API Routes", () => {
       .spyOn(NotionApi.prototype, "createBookPage")
       .mockResolvedValue(firstBookPage);
 
-    const resp = await app.request("/isbn/9787115424914", { method: "POST" });
+    const resp = await app.request(
+      `/isbn/9787115424914?databaseId=${testDbId}`,
+      { method: "POST" }
+    );
     expect(resp.status).toBe(200);
     const data = await resp.json();
     expect(data).toEqual(firstBookPage);
@@ -125,7 +139,10 @@ describe("Books API Routes", () => {
       .mockResolvedValue({ ok: false, data: null, error: "Remote error" });
     const createSpy = vi.spyOn(NotionApi.prototype, "createBookPage");
 
-    const resp = await app.request("/isbn/9787115424914", { method: "POST" });
+    const resp = await app.request(
+      `/isbn/9787115424914?databaseId=${testDbId}`,
+      { method: "POST" }
+    );
     expect(resp.status).toBe(404);
     const data = await resp.json();
     expect(data).toEqual({ error: "Remote book not found or API error" });

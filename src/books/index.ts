@@ -17,7 +17,8 @@ const addClients = createMiddleware(async (c, next) => {
   const tsClient = new TanshuApi(envs.TANSHU_API_KEY);
   c.set("notionClient", notionClient);
   c.set("tsClient", tsClient);
-  c.set("current-db-id", envs.NOTION_DATABASE_ID);
+  // todo clean
+  // c.set("current-db-id", envs.NOTION_DATABASE_ID);
   await next();
 });
 
@@ -34,6 +35,16 @@ export const app = new OpenAPIHono<{
       path: "/",
       request: {
         query: z.object({
+          databaseId: z
+            .string()
+            .min(32)
+            .openapi({
+              param: {
+                name: "databaseId",
+                in: "query",
+              },
+              example: "1b1673e59ab68134a2c9f372f08077ac",
+            }),
           limit: z.coerce
             .number()
             .int()
@@ -62,10 +73,10 @@ export const app = new OpenAPIHono<{
     }),
     async (c) => {
       // console.log("c.req.valid('query')", c.req.valid("query"));
-      const { limit } = c.req.valid("query");
+      const { limit, databaseId } = c.req.valid("query");
       const notionClient: NotionApi = c.get("notionClient");
-      const notionDatabaseId = c.get("current-db-id");
-      const pages = await notionClient.listBookPages(notionDatabaseId, limit);
+      // const notionDatabaseId = c.get("current-db-id");
+      const pages = await notionClient.listBookPages(databaseId, limit);
       return c.json(pages);
     }
   )
@@ -77,6 +88,18 @@ export const app = new OpenAPIHono<{
       method: "post",
       path: "/isbn/{isbn}",
       request: {
+        query: z.object({
+          databaseId: z
+            .string()
+            .min(32)
+            .openapi({
+              param: {
+                name: "databaseId",
+                in: "query",
+              },
+              example: "1b1673e59ab68134a2c9f372f08077ac",
+            }),
+        }),
         params: z.object({
           isbn: z
             .string()
@@ -104,12 +127,13 @@ export const app = new OpenAPIHono<{
       },
     }),
     async (c) => {
+      const { databaseId } = c.req.valid("query");
       const { isbn } = c.req.valid("param");
       const notionClient: NotionApi = c.get("notionClient");
-      const notionDatabaseId = c.get("current-db-id");
+      // const notionDatabaseId = c.get("current-db-id");
       const found = await notionClient.findPrettyBookPageByISBN(
         isbn,
-        notionDatabaseId
+        databaseId
       );
 
       if (found) {
@@ -124,10 +148,7 @@ export const app = new OpenAPIHono<{
       }
 
       const bookData = bookInfo.data;
-      const page = await notionClient.createBookPage(
-        notionDatabaseId,
-        bookData
-      );
+      const page = await notionClient.createBookPage(databaseId, bookData);
       return c.json(page);
     }
   )
@@ -153,6 +174,18 @@ export const app = new OpenAPIHono<{
               example: "9787115424914",
             }),
         }),
+        query: z.object({
+          databaseId: z
+            .string()
+            .min(32)
+            .openapi({
+              param: {
+                name: "databaseId",
+                in: "query",
+              },
+              example: "1b1673e59ab68134a2c9f372f08077ac",
+            }),
+        }),
       },
       security: [
         {
@@ -167,12 +200,13 @@ export const app = new OpenAPIHono<{
       },
     }),
     async (c) => {
+      const { databaseId } = c.req.valid("query");
       const { isbn } = c.req.valid("param");
       const notionClient: NotionApi = c.get("notionClient");
-      const notionDatabaseId = c.get("current-db-id");
+      // const notionDatabaseId = c.get("current-db-id");
       const bookPage = await notionClient.findPrettyBookPageByISBN(
         isbn,
-        notionDatabaseId
+        databaseId
       );
       if (bookPage) {
         return c.json(bookPage);

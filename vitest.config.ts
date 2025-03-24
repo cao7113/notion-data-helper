@@ -9,8 +9,8 @@ export default defineConfig({
     exclude: [...configDefaults.exclude, "_local/*"],
     env: {
       NOTION_API_KEY: "test-notion-key",
-      NOTION_DATABASE_ID: "test-db-id",
       TANSHU_API_KEY: "test-key",
+      NOTION_DATABASE_ID: "1b1673e59ab68134a2c9f372f08077ac",
       TEST_ONLY_ENV: "test only from vitest.config.ts",
     },
     reporters: ["verbose"],

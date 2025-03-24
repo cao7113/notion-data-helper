@@ -2,7 +2,6 @@
 import { Command } from "commander";
 import { z } from "zod";
 import NotionApi from "../src/books/notionApi";
-// import {boo} from "../src/books/notionApi";
 import TanshuApi from "../src/books/tanshuApi";
 
 const version = "0.0.1";
@@ -128,7 +127,7 @@ program
   .action(async (dbId, _opts) => {
     dbId = dbId || sampleDbId;
     const db = await notion.getDb(dbId);
-    console.log(db);
+    console.log(JSON.stringify(db, null, 2));
   });
 
 program.parse();

@@ -215,7 +215,7 @@ const sui = swaggerUI({
           dom_id: "#swagger-ui",
           presets: [SwaggerUIBundle.presets.apis],
           requestInterceptor: (request) => {
-            if (window.location.href.startsWith("http://localhost")) {
+            if (window.location.href.startsWith("http://localhost") || window.location.href.startsWith("http://192.168.1.") ) {
               request.headers["Authorization"] = "Bearer ${
                 process.env.BEARER_AUTH_TOKEN
               }";
