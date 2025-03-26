@@ -4,6 +4,8 @@ tasks:
   default: bun run test
   dev: bun run dev
   repl: bun repl
+  rel: bun run release
+  rel-skip-ci: standard-version --skip.commit
 
   books: |
     curl -v -H "Authorization: Bearer dogoodjob" http://localhost:3000/books?pageSize=3 | jq

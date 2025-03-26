@@ -1,5 +1,6 @@
 {
   "name": "notion-data-helper",
+  "version": "0.0.1",
   "scripts": {
     "start": "bun run src/index.ts",
     "dev": "bun run --hot src/index.ts",
@@ -8,7 +9,8 @@
     "test": "vitest run --watch=false",
     "cf-dev": "wrangler dev",
     "cf-dep": "wrangler deploy --minify",
-    "cf-typegen": "wrangler types --env-interface CloudflareBindings"
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "release": "standard-version"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.8",
@@ -22,6 +24,7 @@
     "@cloudflare/workers-types": "^4.20250311.0",
     "@types/bun": "^1.2.5",
     "vitest": "^3.0.8",
-    "wrangler": "^3.114.1"
+    "wrangler": "^3.114.1",
+    "standard-version": "^9.5.0"
   }
 }

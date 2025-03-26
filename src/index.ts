@@ -9,6 +9,7 @@ import { swaggerUI } from "@hono/swagger-ui";
 // import { serve } from "@hono/node-server";
 import books from "./books/index";
 import { bearerMiddleware } from "./auth";
+import { version } from "../package.json";
 
 const app = new OpenAPIHono<{
   // Specify the variable types to infer the `c.get('jwtPayload')`:
@@ -194,7 +195,7 @@ app.doc31("/openapi", (c) => {
     openapi: "3.1.0",
     info: {
       title: "Notion Data Helper API Docs",
-      version: "0.0.1",
+      version: version,
       // https://spec.commonmark.org/0.31.2/#links
       description: `
         More: [Hono Zod OpenAPI](https://hono.dev/examples/zod-openapi)
@@ -242,7 +243,7 @@ app.get("/", sui);
 
 // console.log(JSON.stringify(app, null, 2));
 const runtime = getRuntimeKey();
-console.log(`Runtime: ${runtime}`);
+console.log(`App Version: ${version} on Runtime: ${runtime}`);
 
 let finalApp;
 
