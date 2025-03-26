@@ -4,7 +4,7 @@ tasks:
   default: bun run test
   dev: bun run dev
   repl: bun repl
-  rel: bun run release
+  rel: bun run test && bun run release
   rel-skip-ci: standard-version --skip.commit
 
   books: |
