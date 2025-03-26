@@ -198,7 +198,9 @@ app.doc31("/openapi", (c) => {
       version: version,
       // https://spec.commonmark.org/0.31.2/#links
       description: `
-        More: [Hono Zod OpenAPI](https://hono.dev/examples/zod-openapi)
+        More: 
+        - [Github](https://github.com/cao7113/notion-data-helper)
+        - [Hono Zod OpenAPI](https://hono.dev/examples/zod-openapi)
       `,
     },
     servers: [
