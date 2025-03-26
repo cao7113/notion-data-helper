@@ -4,7 +4,7 @@ const version = "0.0.1";
 
 // https://github.com/tj/commander.js?tab=readme-ov-file#commanderjs
 const program = new Command()
-  .name("tanshu")
+  .name("tool")
   .description("Tool CLI")
   .version(version);
 

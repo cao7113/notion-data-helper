@@ -43,6 +43,13 @@ app
       responses: {
         200: {
           description: "Success message",
+          content: {
+            "application/json": {
+              schema: z.object({
+                message: z.literal("Pong"),
+              }),
+            },
+          },
         },
       },
     }),
@@ -177,6 +184,7 @@ app
     }
   );
 
+// https://swagger.io/specification/
 app.doc31("/openapi", (c) => {
   let origin = new URL(c.req.url).origin;
   if (origin.includes(".fly.dev") && origin.startsWith("http://")) {
@@ -187,7 +195,10 @@ app.doc31("/openapi", (c) => {
     info: {
       title: "Notion Data Helper API Docs",
       version: "0.0.1",
-      description: "More description here...",
+      // https://spec.commonmark.org/0.31.2/#links
+      description: `
+        More: [Hono Zod OpenAPI](https://hono.dev/examples/zod-openapi)
+      `,
     },
     servers: [
       {

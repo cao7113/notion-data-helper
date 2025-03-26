@@ -17,10 +17,66 @@ const addClients = createMiddleware(async (c, next) => {
   const tsClient = new TanshuApi(envs.TANSHU_API_KEY);
   c.set("notionClient", notionClient);
   c.set("tsClient", tsClient);
-  // todo clean
-  // c.set("current-db-id", envs.NOTION_DATABASE_ID);
   await next();
 });
+
+const BookPageSchema = z
+  .object({
+    id: z.string().openapi({
+      example: "1b2673e5-9ab6-817a-99b9-fccf8e27d06d",
+    }),
+    created_time: z.string().openapi({
+      example: "2025-03-10T03:39:00.000Z",
+    }),
+    last_edited_time: z.string().openapi({
+      example: "2025-03-10T03:39:00.000Z",
+    }),
+    url: z.string().url().openapi({
+      example: "https://www.notion.so/1b2673e59ab6817a99b9fccf8e27d06d",
+    }),
+    properties: z.object({
+      PublishedDate: z.string().openapi({
+        example: "2016-06-01",
+      }),
+      Note: z.string().openapi({
+        example: "",
+      }),
+      Summary: z.string().openapi({
+        example:
+          "本书以图配文的形式，详细讲解了6种重要的密码技术：对称密码、公钥密码、单向散列函数、消息认证码、数字签名和伪*数生成器。",
+      }),
+      Publisher: z.string().openapi({
+        example: "人民邮电出版社",
+      }),
+      Author: z.string().openapi({
+        example: "结城浩",
+      }),
+      ISBN: z.string().openapi({
+        example: "9787115424914",
+      }),
+      CoverImage: z.string().openapi({
+        example:
+          "http://static1.showapi.com/app2/isbn/imgs/72868dd64dcd404e92f19d6f21ee9c71.jpg",
+      }),
+      Title: z.string().openapi({
+        example: "图解密码技术",
+      }),
+    }),
+  })
+  .openapi("BookPage");
+
+const BookPageListSchema = z.array(BookPageSchema).openapi("BookPageList");
+
+const DbIdSchema = z
+  .string()
+  .min(32)
+  .openapi({
+    param: {
+      name: "databaseId",
+      in: "query",
+    },
+    example: "1b1673e59ab68134a2c9f372f08077ac",
+  });
 
 export const app = new OpenAPIHono<{
   Variables: Variables;
@@ -35,16 +91,7 @@ export const app = new OpenAPIHono<{
       path: "/",
       request: {
         query: z.object({
-          databaseId: z
-            .string()
-            .min(32)
-            .openapi({
-              param: {
-                name: "databaseId",
-                in: "query",
-              },
-              example: "1b1673e59ab68134a2c9f372f08077ac",
-            }),
+          databaseId: DbIdSchema,
           limit: z.coerce
             .number()
             .int()
@@ -68,14 +115,17 @@ export const app = new OpenAPIHono<{
       responses: {
         200: {
           description: "Success message",
+          content: {
+            "application/json": {
+              schema: BookPageListSchema,
+            },
+          },
         },
       },
     }),
     async (c) => {
-      // console.log("c.req.valid('query')", c.req.valid("query"));
       const { limit, databaseId } = c.req.valid("query");
       const notionClient: NotionApi = c.get("notionClient");
-      // const notionDatabaseId = c.get("current-db-id");
       const pages = await notionClient.listBookPages(databaseId, limit);
       return c.json(pages);
     }
@@ -89,16 +139,7 @@ export const app = new OpenAPIHono<{
       path: "/isbn/{isbn}",
       request: {
         query: z.object({
-          databaseId: z
-            .string()
-            .min(32)
-            .openapi({
-              param: {
-                name: "databaseId",
-                in: "query",
-              },
-              example: "1b1673e59ab68134a2c9f372f08077ac",
-            }),
+          databaseId: DbIdSchema,
         }),
         params: z.object({
           isbn: z
@@ -123,6 +164,11 @@ export const app = new OpenAPIHono<{
       responses: {
         200: {
           description: "Success message",
+          content: {
+            "application/json": {
+              schema: BookPageSchema,
+            },
+          },
         },
       },
     }),
@@ -130,7 +176,6 @@ export const app = new OpenAPIHono<{
       const { databaseId } = c.req.valid("query");
       const { isbn } = c.req.valid("param");
       const notionClient: NotionApi = c.get("notionClient");
-      // const notionDatabaseId = c.get("current-db-id");
       const found = await notionClient.findPrettyBookPageByISBN(
         isbn,
         databaseId
@@ -175,16 +220,7 @@ export const app = new OpenAPIHono<{
             }),
         }),
         query: z.object({
-          databaseId: z
-            .string()
-            .min(32)
-            .openapi({
-              param: {
-                name: "databaseId",
-                in: "query",
-              },
-              example: "1b1673e59ab68134a2c9f372f08077ac",
-            }),
+          databaseId: DbIdSchema,
         }),
       },
       security: [
@@ -196,6 +232,11 @@ export const app = new OpenAPIHono<{
       responses: {
         200: {
           description: "Success message",
+          content: {
+            "application/json": {
+              schema: BookPageSchema,
+            },
+          },
         },
       },
     }),
@@ -203,7 +244,6 @@ export const app = new OpenAPIHono<{
       const { databaseId } = c.req.valid("query");
       const { isbn } = c.req.valid("param");
       const notionClient: NotionApi = c.get("notionClient");
-      // const notionDatabaseId = c.get("current-db-id");
       const bookPage = await notionClient.findPrettyBookPageByISBN(
         isbn,
         databaseId
@@ -272,6 +312,13 @@ export const app = new OpenAPIHono<{
       responses: {
         200: {
           description: "Success message",
+          content: {
+            "application/json": {
+              schema: z.object({
+                message: z.literal("Welcome to books!"),
+              }),
+            },
+          },
         },
       },
     }),

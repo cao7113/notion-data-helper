@@ -8,9 +8,29 @@ import type {
 import { LogLevel } from "@notionhq/client/build/src/logging";
 import { BookData } from "./bookData";
 
+type BooksDatabaseProperties = CreateDatabaseParameters["properties"];
+// type BookDatabasePropertyValues =
+//   CreateDatabaseParameters["properties"][keyof CreateDatabaseParameters["properties"]];
+
+const booksDbCreatePropsSchema: BooksDatabaseProperties = {
+  Title: {
+    ...as_type("title"),
+    description: "Title",
+  },
+  ISBN: as_type("rich_text"),
+  Author: as_type("rich_text"),
+  CoverImage: as_type("url"),
+  Publisher: as_type("rich_text"),
+  PublishedDate: as_type("date"),
+  Summary: as_type("rich_text"),
+  Note: as_type("rich_text"),
+};
+
 export function getPageInfo(page: PageObjectResponse) {
   const prettyProps = Object.keys(page.properties).reduce((acc, key) => {
-    acc[key] = getPagePropItemValue(page, key);
+    if (booksDbCreatePropsSchema[key]) {
+      acc[key] = getPagePropItemValue(page, key);
+    }
     return acc;
   }, {} as Record<string, any>);
 
@@ -77,24 +97,6 @@ function as_type(kind: string) {
       throw new Error(`Unsupported type: ${kind}`);
   }
 }
-
-type BooksDatabaseProperties = CreateDatabaseParameters["properties"];
-// type BookDatabasePropertyValues =
-//   CreateDatabaseParameters["properties"][keyof CreateDatabaseParameters["properties"]];
-
-const booksDbCreatePropsSchema: BooksDatabaseProperties = {
-  Title: {
-    ...as_type("title"),
-    description: "Title",
-  },
-  ISBN: as_type("rich_text"),
-  Author: as_type("rich_text"),
-  CoverImage: as_type("url"),
-  Publisher: as_type("rich_text"),
-  PublishedDate: as_type("date"),
-  Summary: as_type("rich_text"),
-  Note: as_type("rich_text"),
-};
 
 type FieldMapping = {
   notionProp: string;
