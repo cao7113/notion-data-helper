@@ -13,13 +13,13 @@ ENV NODE_ENV=production
 COPY package.json bun.lock* ./
 
 # 安装项目依赖
-RUN bun install
+RUN bun install --production
 
 # 复制项目全部代码
 COPY . .
 
 # 使用 bun build 将 TypeScript 代码编译打包至 dist 目录，并做最小化处理
-RUN bun build src/index.ts --outdir dist --minify
+RUN bun build src/index.ts --outdir dist --target bun --minify
 
 ###############################
 # Production Stage

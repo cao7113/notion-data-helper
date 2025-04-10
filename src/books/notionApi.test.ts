@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import notionDemoBookPagesResp from "../../test/notion-book-pages-resp.json";
-import tsDemoBookResp from "../../test/tanshu-demo-book-resp.json";
+import tsDemoBookResp from "../../test/cacher-demo-isbn-resp.json";
 import NotionApi from "./notionApi";
 import {
   bookDataToBookPageProps,
@@ -13,7 +13,7 @@ import type {
   // CreateDatabaseResponse,
   // CreateDatabaseParameters,
 } from "@notionhq/client/build/src/api-endpoints";
-import { BookData } from "./bookData";
+import { BookData } from "./types";
 
 const firstBookPage = notionDemoBookPagesResp.results[0];
 const firstPrettyBookPage = getPageInfo(firstBookPage as PageObjectResponse);
@@ -57,7 +57,9 @@ describe("bookDataToBookPageProps", () => {
       Author: { rich_text: [{ text: { content: bookData.author } }] },
       ISBN: { rich_text: [{ text: { content: bookData.isbn } }] },
       Publisher: { rich_text: [{ text: { content: bookData.publisher } }] },
-      PublishedDate: { date: { start: bookData.pubdate } },
+      // PublishedDate: { date: { start: bookData.pubdate } },
+      // manual fix date format
+      PublishedDate: { date: { start: "2016-06-01" } },
       Summary: { rich_text: [{ text: { content: bookData.summary } }] },
       CoverImage: { url: bookData.img },
     });

@@ -4,8 +4,8 @@ import { env } from "hono/adapter";
 
 // NOTE: The z object should be imported from @hono/zod-openapi other than from hono
 import { z, createRoute, OpenAPIHono } from "@hono/zod-openapi";
-import TanshuApi from "./tanshuApi";
 import NotionApi from "./notionApi";
+import CacherApi from "./cacherApi";
 
 // Specify the variable types to infer the `c.get('jwtPayload')`:
 type Variables = JwtVariables;
@@ -14,9 +14,10 @@ const addClients = createMiddleware(async (c, next) => {
   const envs = env(c);
   // console.log("envs", envs);
   const notionClient = new NotionApi(envs.NOTION_API_KEY);
-  const tsClient = new TanshuApi(envs.TANSHU_API_KEY);
+  const cacherClient = new CacherApi(envs.CACHER_BEARER_AUTH_TOKEN);
   c.set("notionClient", notionClient);
-  c.set("tsClient", tsClient);
+  c.set("cacherClient", cacherClient);
+
   await next();
 });
 
@@ -75,7 +76,8 @@ const DbIdSchema = z
       name: "databaseId",
       in: "query",
     },
-    example: "1b1673e59ab68134a2c9f372f08077ac",
+    example:
+      process.env.NOTION_DATABASE_ID || "1c4673e59ab6818e97c3db3941ad1135",
   });
 
 export const app = new OpenAPIHono<{
@@ -173,21 +175,21 @@ export const app = new OpenAPIHono<{
       },
     }),
     async (c) => {
-      const { databaseId } = c.req.valid("query");
       const { isbn } = c.req.valid("param");
+      const { databaseId } = c.req.valid("query");
       const notionClient: NotionApi = c.get("notionClient");
+
       const found = await notionClient.findPrettyBookPageByISBN(
         isbn,
         databaseId
       );
-
       if (found) {
         console.log(`Book found at ${found?.url}`);
         return c.json(found);
       }
 
-      const tsClient: TanshuApi = c.get("tsClient");
-      const bookInfo = await tsClient.getBookInfo(isbn);
+      const cacherClient = c.get("cacherClient");
+      const bookInfo = await cacherClient.getBookInfo(isbn);
       if (!bookInfo.ok) {
         return c.json({ error: "Remote book not found or API error" }, 404);
       }
@@ -201,7 +203,7 @@ export const app = new OpenAPIHono<{
   .openapi(
     createRoute({
       tags: ["Books"],
-      summary: "Get book by isbn",
+      summary: "Get book by ISBN",
       method: "get",
       path: "/isbn/{isbn}",
       request: {
@@ -253,47 +255,6 @@ export const app = new OpenAPIHono<{
       } else {
         return c.json({ error: "Book not found" }, 404);
       }
-    }
-  )
-  // get remote book-info
-  .openapi(
-    createRoute({
-      summary: "Get remote book info by isbn",
-      tags: ["Books"],
-      method: "get",
-      path: "/remote/isbn/{isbn}",
-      request: {
-        params: z.object({
-          isbn: z
-            .string()
-            .min(10)
-            .max(13)
-            .openapi({
-              param: {
-                name: "isbn",
-                in: "path",
-              },
-              example: "9787115424914",
-            }),
-        }),
-      },
-      security: [
-        {
-          Bearer: [],
-        },
-      ],
-      middleware: [addClients],
-      responses: {
-        200: {
-          description: "Success message",
-        },
-      },
-    }),
-    async (c) => {
-      const { isbn } = c.req.valid("param");
-      const tsClient: TanshuApi = c.get("tsClient");
-      const bookInfo = await tsClient.getBookInfo(isbn);
-      return c.json(bookInfo);
     }
   )
   // welcome

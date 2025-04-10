@@ -1,27 +1,30 @@
 {
   "name": "notion-data-helper",
+  "version": "0.0.1",
+  "type": "module",
   "scripts": {
     "start": "bun run src/index.ts",
     "dev": "bun run --hot src/index.ts",
-    "build": "bun build src/index.ts --outdir dist --minify",
+    "build": "bun build src/index.ts --outdir dist --minify --target bun",
     "prod": "bun run dist/index.js",
     "test": "vitest run --watch=false",
     "cf-dev": "wrangler dev",
     "cf-dep": "wrangler deploy --minify",
-    "cf-typegen": "wrangler types --env-interface CloudflareBindings"
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "release": "standard-version"
   },
   "dependencies": {
-    "@hono/node-server": "^1.13.8",
     "@hono/swagger-ui": "^0.5.1",
-    "@hono/zod-openapi": "^0.19.2",
-    "@notionhq/client": "^2.2.16",
-    "commander": "^13.1.0",
-    "hono": "^4.7.4"
+    "@hono/zod-openapi": "^0.19.4",
+    "@notionhq/client": "^2.3.0",
+    "hono": "^4.7.6"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250311.0",
-    "@types/bun": "^1.2.5",
-    "vitest": "^3.0.8",
-    "wrangler": "^3.114.1"
+    "@cloudflare/workers-types": "^4.20250410.0",
+    "@types/bun": "^1.2.9",
+    "commander": "^13.1.0",
+    "standard-version": "^9.5.0",
+    "vitest": "^3.1.1",
+    "wrangler": "^3.114.5"
   }
 }

@@ -1,6 +1,6 @@
 #! /usr/bin/env bun
 import { Command } from "commander";
-const version = "0.0.1";
+import { version } from "../package.json";
 
 // https://github.com/tj/commander.js?tab=readme-ov-file#commanderjs
 const program = new Command()

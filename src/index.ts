@@ -1,14 +1,16 @@
 import { logger } from "hono/logger";
+import { timing, setMetric, startTime, endTime } from "hono/timing";
 // import { jwt } from "hono/jwt";
 import type { JwtVariables } from "hono/jwt";
 import { env, getRuntimeKey } from "hono/adapter";
-import { timing, setMetric, startTime, endTime } from "hono/timing";
 // NOTE: The z object should be imported from @hono/zod-openapi other than from hono
 import { z, createRoute, OpenAPIHono } from "@hono/zod-openapi";
 import { swaggerUI } from "@hono/swagger-ui";
 // import { serve } from "@hono/node-server";
-import books from "./books/index";
+
+import { version } from "../package.json";
 import { bearerMiddleware } from "./auth";
+import books from "./books/index";
 
 const app = new OpenAPIHono<{
   // Specify the variable types to infer the `c.get('jwtPayload')`:
@@ -194,10 +196,12 @@ app.doc31("/openapi", (c) => {
     openapi: "3.1.0",
     info: {
       title: "Notion Data Helper API Docs",
-      version: "0.0.1",
+      version: version,
       // https://spec.commonmark.org/0.31.2/#links
       description: `
-        More: [Hono Zod OpenAPI](https://hono.dev/examples/zod-openapi)
+        More: 
+        - [Github](https://github.com/cao7113/notion-data-helper)
+        - [Hono Zod OpenAPI](https://hono.dev/examples/zod-openapi)
       `,
     },
     servers: [
@@ -242,7 +246,7 @@ app.get("/", sui);
 
 // console.log(JSON.stringify(app, null, 2));
 const runtime = getRuntimeKey();
-console.log(`Runtime: ${runtime}`);
+console.log(`App Version: ${version} on Runtime: ${runtime}`);
 
 let finalApp;
 

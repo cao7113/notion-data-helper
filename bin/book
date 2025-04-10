@@ -1,31 +1,34 @@
 #! /usr/bin/env bun
+
+// https://github.com/tj/commander.js?tab=readme-ov-file#commanderjs
 import { Command } from "commander";
 import { z } from "zod";
 import NotionApi from "../src/books/notionApi";
-import TanshuApi from "../src/books/tanshuApi";
-
-const version = "0.0.1";
-
-// https://github.com/tj/commander.js?tab=readme-ov-file#commanderjs
-const program = new Command()
-  .name("book")
-  .description("Notioner books CLI")
-  .version(version);
+import CacherApi from "../src/books/cacherApi";
+import { version } from "../package.json";
+import { mkdir, writeFile } from "fs/promises";
+import path from "path";
+import { readFile, readdir } from "fs/promises";
 
 // const apiKey = process.env.NOTION_API_KEY!;
 const apiKey = process.env.NOTION_API_KEY;
 if (!apiKey) {
   throw new Error("NOTION_API_KEY is not defined");
 }
-
 const notion = new NotionApi(apiKey);
 const sampleDbId = process.env.NOTION_DATABASE_ID;
-const demoISNB = "9787115424914";
-const tanshuApiKey = process.env.TANSHU_API_KEY;
-if (!tanshuApiKey) {
+const demoBooksISBN = ["9787115424914", "9787115530981", "9787115293688"];
+const demoISNB = demoBooksISBN[0];
+const cacherApiKey = process.env.TANSHU_API_KEY;
+if (!cacherApiKey) {
   throw new Error("TANSHU_API_KEY is not defined");
 }
-const tsClient = new TanshuApi(tanshuApiKey);
+const cacherClient = new CacherApi(cacherApiKey);
+
+const program = new Command()
+  .name("book")
+  .description("Notioner books CLI")
+  .version(version);
 
 program
   .command("list")
@@ -41,16 +44,171 @@ program
   });
 
 program
+  .command("all")
+  .alias("a")
+  .description("list all books page by page")
+  .option("-d, --dbid <string>", "db id", sampleDbId)
+  .option("-l, --limit <number>", "limit", 100)
+  .option("-s, --size <number>", "size", 10)
+  .action(async (opts) => {
+    const dbId = z.string().parse(opts.dbid);
+    const limit = z.coerce.number().int().min(1).parse(opts.limit);
+    const pageSize = z.coerce.number().int().min(1).parse(opts.size);
+
+    const action = async (page, _) => {
+      const props = page.properties;
+      console.log(`${props.ISBN} ${page.url} ${props.Title}`);
+    };
+    await notion.pagingHandle({ databaseId: dbId, action, limit, pageSize });
+  });
+
+program
+  .command("export")
+  .description("export books info (only isbn, title, url) page by page")
+  .option("-d, --dbid <string>", "db id", sampleDbId)
+  .option("-l, --limit <number>", "limit", 200)
+  .option("-s, --size <number>", "size", 100)
+  .action(async (opts) => {
+    const dbId = z.string().parse(opts.dbid);
+    const limit = z.coerce.number().int().min(1).parse(opts.limit);
+    const pageSize = z.coerce.number().int().min(1).parse(opts.size);
+    console.log({ dbId, limit, pageSize });
+
+    const results = [];
+    const action = async (page, idx) => {
+      const props = page.properties;
+      results.push({
+        index: idx,
+        isbn: props.ISBN,
+        url: page.url,
+        title: props.Title,
+        created_time: page.created_time,
+      });
+    };
+    await notion.pagingHandle({ databaseId: dbId, action, limit, pageSize });
+
+    const outputDir = path.resolve("db", "output");
+    await mkdir(outputDir, { recursive: true });
+
+    const now = new Date();
+    const pad = (num) => num.toString().padStart(2, "0");
+    // const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(
+    //   now.getDate()
+    // )}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+    // const fileName = `db-${dbId}-${timestamp}.json`;
+    const fileName = `db-${dbId}.json`;
+    const filePath = path.join(outputDir, fileName);
+
+    await writeFile(filePath, JSON.stringify(results, null, 2));
+    console.log(`Results successfully written to ${filePath}`);
+  });
+
+program
+  .command("import-books")
+  .description("import book-pages from output file")
+  .alias("import")
+  .argument("[string]", "file")
+  .option("-d, --dbid <string>", "db id")
+  .option("-e, --excludefile <string>", "excluded isbn from import file")
+  .action(async (file, opts) => {
+    const dbId = z.string().min(10).parse(opts.dbid);
+
+    if (!file) {
+      console.error("Input file is required");
+      process.exit(1);
+    }
+
+    let importedBooks;
+    try {
+      const content = await readFile(file, "utf8");
+      importedBooks = JSON.parse(content);
+    } catch (err) {
+      console.error("Failed to read or parse JSON file:", err);
+      process.exit(1);
+    }
+
+    if (opts.excludefile) {
+      let excludedISBNs = [];
+      try {
+        const content = await readFile(opts.excludefile, "utf8");
+        const parsed = JSON.parse(content);
+        // Expecting excludefile to be a JSON array of objects with an 'isbn' field
+        excludedISBNs = Array.from(new Set(parsed.map((item) => item.isbn)));
+      } catch (err) {
+        console.error("Failed to read excludefile:", err);
+        process.exit(1);
+      }
+      importedBooks = importedBooks.filter(
+        (book) => !excludedISBNs.includes(book.isbn)
+      );
+    }
+
+    if (importedBooks.length === 0) {
+      console.log("No books to import");
+      process.exit(0);
+    }
+
+    // 添加 index 字段标识顺序
+    importedBooks = importedBooks.map((book, idx) => ({
+      ...book,
+      index: idx + 1,
+    }));
+
+    for (const book of importedBooks) {
+      const isbn = book.isbn;
+      const bookInfo = await cacherClient.getBookInfo(isbn);
+      if (bookInfo.ok) {
+        const resp = await notion.createBookPage(dbId, bookInfo.data, false);
+        const url = resp["url"];
+        console.log(
+          `[${book.index}] created books-page ${isbn} ${book.title} created at ${url}`
+        );
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    }
+  });
+
+program
+  .command("transfer")
+  .alias("move")
+  .description("move books page to another db")
+  .option("--fromdb <string>", "db id")
+  .option("--todb <string>", "db id")
+  .option("-l, --limit <number>", "limit", 100)
+  .option("-s, --size <number>", "size", 10)
+  .action(async (opts) => {
+    const fromDb = z.string().parse(opts.fromdb);
+    const toDb = z.string().parse(opts.todb);
+    const limit = z.coerce.number().int().min(1).parse(opts.limit);
+    const pageSize = z.coerce.number().int().min(1).parse(opts.size);
+
+    const action = async (page, idx) => {
+      const props = page.properties;
+      const isbn = props.ISBN;
+      console.log(`[${idx}] ${isbn} ${page.url} ${props.Title}`);
+
+      const bookInfo = await cacherClient.getBookInfo(isbn);
+      if (bookInfo.ok) {
+        const resp = await notion.createBookPage(toDb, bookInfo.data, true);
+        const url = resp["url"];
+        console.log(`created books-page ${isbn} at ${url}`);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    };
+    await notion.pagingHandle({ databaseId: fromDb, action, limit, pageSize });
+  });
+
+program
   .command("query")
   .alias("q")
   .description("query books")
   .argument("[string]", "db-id")
   .option("-l, --limit <number>", "limit", 3)
-  .action(async (dbId, _opts) => {
+  .action(async (dbId, opts) => {
     dbId = dbId || sampleDbId;
     const limit = z.coerce.number().int().min(1).parse(opts.limit);
     const resp = await notion.queryBookPages(dbId, limit);
-    console.log(resp);
+    console.log(JSON.stringify(resp, null, 2));
   });
 
 program
@@ -73,11 +231,28 @@ program
   .option("-d, --dbid <string>", "db id", sampleDbId)
   .action(async (isbn, opts) => {
     isbn = isbn || demoISNB;
-    const bookInfo = await tsClient.getBookInfo(isbn);
+    const bookInfo = await cacherClient.getBookInfo(isbn);
     if (bookInfo.ok) {
-      const resp = await notion.createBookPage(opts.dbid, bookInfo.data);
+      const resp = await notion.createBookPage(opts.dbid, bookInfo.data, true);
       const url = resp["url"];
       console.log(`books-page for isbn ${isbn} created at ${url}`);
+    }
+  });
+
+program
+  .command("fill-demo-books")
+  .description("fill demo book-pages")
+  .alias("fill")
+  .option("-d, --dbid <string>", "db id", sampleDbId)
+  .action(async (opts) => {
+    const dbId = opts.dbid;
+    for (const isbn of demoBooksISBN) {
+      const bookInfo = await cacherClient.getBookInfo(isbn);
+      if (bookInfo.ok) {
+        const resp = await notion.createBookPage(dbId, bookInfo.data, true);
+        const url = resp["url"];
+        console.log(`books-page for isbn ${isbn} created at ${url}`);
+      }
     }
   });
 
@@ -104,7 +279,7 @@ program
   .option(
     "-p, --parentid <string>",
     "parent page id to create new sub-db, NOTE: should connected to Notion data-helper integration!",
-    "1af673e59ab680338679c433c9a6dfb6"
+    process.env.BOOKS_PARENT_ID
   )
   .action(async (title, opts) => {
     title = title || "books-store";
@@ -128,6 +303,122 @@ program
     dbId = dbId || sampleDbId;
     const db = await notion.getDb(dbId);
     console.log(JSON.stringify(db, null, 2));
+  });
+
+program
+  .command("open-db")
+  .description("open books db")
+  .argument("[string]", "db-id")
+  .action(async (dbId, _opts) => {
+    dbId = dbId || sampleDbId;
+    const url = `https://www.notion.so/${dbId}`;
+    console.log(`Open books db: ${url}`);
+  });
+
+program
+  .command("check-isbn")
+  .description("check for duplicate ISBNs in a JSON file")
+  .argument("<string>", "file path")
+  .action(async (filePath) => {
+    try {
+      const content = await readFile(filePath, "utf8");
+      const books = JSON.parse(content);
+
+      const isbnCounts = books.reduce((acc, book) => {
+        const isbn = book.isbn || "UNKNOWN";
+        acc[isbn] = (acc[isbn] || 0) + 1;
+        return acc;
+      }, {});
+
+      const duplicates = Object.entries(isbnCounts).filter(
+        ([_, count]) => count > 1
+      );
+
+      if (duplicates.length > 0) {
+        console.log("Duplicate ISBNs found:");
+        duplicates.forEach(([isbn, count]) => {
+          console.log(`ISBN: ${isbn}, Count: ${count}`);
+        });
+      } else {
+        console.log("No duplicate ISBNs found.");
+      }
+    } catch (err) {
+      console.error("Failed to read or parse JSON file:", err);
+      process.exit(1);
+    }
+  });
+
+program
+  .command("check-invalid-isbn")
+  .description("check for invalid ISBNs in a JSON file")
+  .argument("<string>", "file path")
+  .action(async (filePath) => {
+    try {
+      const content = await readFile(filePath, "utf8");
+      const books = JSON.parse(content);
+
+      const invalidISBNs = books.filter(
+        (book) => !/^\d{13}$/.test(book.isbn || "")
+      );
+
+      if (invalidISBNs.length > 0) {
+        console.log("Invalid ISBNs found:");
+        invalidISBNs.forEach((book) => {
+          console.log(`Index: ${book.index}, ISBN: ${book.isbn}`);
+        });
+      } else {
+        console.log("No invalid ISBNs found.");
+      }
+    } catch (err) {
+      console.error("Failed to read or parse JSON file:", err);
+      process.exit(1);
+    }
+  });
+
+program
+  .command("check-dir-isbn")
+  .description("check for invalid ISBNs in all JSON files in a directory")
+  .option("-d, --dir <string>", "directory path", "db/output")
+  .action(async (opts) => {
+    const dirPath = opts.dir;
+
+    try {
+      const files = await readdir(dirPath);
+      const jsonFiles = files.filter((file) => file.endsWith(".json"));
+
+      if (jsonFiles.length === 0) {
+        console.log(`No JSON files found in directory: ${dirPath}`);
+        return;
+      }
+
+      for (const file of jsonFiles) {
+        const filePath = path.join(dirPath, file);
+        console.log(`Checking file: ${filePath}`);
+
+        try {
+          const content = await readFile(filePath, "utf8");
+          const books = JSON.parse(content);
+
+          const invalidISBNs = books.filter(
+            (book) => !/^\d{13}$/.test(book.isbn || "")
+          );
+
+          if (invalidISBNs.length > 0) {
+            console.log(`Invalid ISBNs found in ${file}:`);
+            invalidISBNs.forEach((book) => {
+              console.log(`  Index: ${book.index}, ISBN: ${book.isbn}`);
+            });
+          } else {
+            console.log(`No invalid ISBNs found in ${file}.`);
+          }
+        } catch (err) {
+          console.error(`Failed to process file ${filePath}:`, err);
+        }
+      }
+    } catch (err) {
+      console.error(`Failed to read directory ${dirPath}:`, err);
+      process.exit(1);
+    }
   });
 
 program.parse();

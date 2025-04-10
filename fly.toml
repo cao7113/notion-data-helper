@@ -10,14 +10,19 @@ primary_region = 'sin'
 
 [env]
   PORT = '8080'
+  NOTION_DATABASE_ID="1c4673e59ab681f4b64de4972526a88b"
 
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = 'stop'
+  auto_stop_machines = true
   auto_start_machines = true
   min_machines_running = 0
   processes = ['app']
+  
+  # 增加自动停止的时间间隔（单位：秒）
+  # 默认可能是1800秒（30分钟），可以设置为更长时间
+  auto_stop_machines_idle_timeout = 1800  # 设置为1小时无活动后停止
 
 [[vm]]
   memory = '512mb'

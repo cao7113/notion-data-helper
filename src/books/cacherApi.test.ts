@@ -1,8 +1,8 @@
 import { describe, expect, test, vi } from "vitest";
-import tsDemoBookResp from "../../test/tanshu-demo-book-resp.json";
-import TanshuApi from "./tanshuApi";
+import CacherApi from "./cacherApi";
+import tsDemoBookResp from "../../test/cacher-demo-isbn-resp.json";
 
-describe("TanshuApi", () => {
+describe("CacherApi", () => {
   const mockFetch = vi.fn();
 
   beforeAll(() => {
@@ -17,18 +17,24 @@ describe("TanshuApi", () => {
     vi.restoreAllMocks();
   });
 
-  test("should fetch book info successfully", async () => {
+  test("should fetch isbn info successfully", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => tsDemoBookResp,
     });
 
-    const api = new TanshuApi("test-auth-key");
+    const api = new CacherApi("test-auth-key");
     const isbn = "9781234567890";
     const bookInfo = await api.getBookInfo(isbn);
 
     expect(mockFetch).toHaveBeenCalledWith(
-      `https://api.tanshuapi.com/api/isbn_base/v1/index?isbn=${isbn}&key=test-auth-key`
+      `https://api-cache.fly.dev/tanshu/isbn/${isbn}`,
+      {
+        headers: {
+          Authorization: "Bearer test-auth-key",
+          accept: "application/json",
+        },
+      }
     );
     expect(bookInfo.data).toEqual(tsDemoBookResp.data);
   });
@@ -36,16 +42,18 @@ describe("TanshuApi", () => {
   test("should throw an error if fetch fails", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: false,
-      error: "xxx error",
+      status: 400,
+      statusText: "Bad Request",
+      json: async () => ({ error: "Invalid ISBN format" }),
     });
 
-    const api = new TanshuApi("test-auth-key");
+    const api = new CacherApi("test-auth-key", true);
     const isbn = "9781234567890";
 
     const data = await api.getBookInfo(isbn);
     expect(data).toEqual({
       data: null,
-      error: `Failed to fetch remote-book ISBN ${isbn}`,
+      error: `Failed to fetch book with ISBN ${isbn}: 400 Bad Request`,
       ok: false,
     });
   });

@@ -1,12 +1,12 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { app } from "./index";
 import NotionApi from "./notionApi";
-import TanshuApi from "./tanshuApi";
+import CacherApi from "./cacherApi";
 import demoBookPage from "../../test/demo-book-page.json";
 import bookPagesResp from "../../test/notion-book-pages-resp.json";
-import tsDemoBookResp from "../../test/tanshu-demo-book-resp.json";
+import tsDemoBookResp from "../../test/cacher-demo-isbn-resp.json";
 import {
-  bookDataToBookPageProps,
+  // bookDataToBookPageProps,
   getPagePropItemValue,
   getPageInfo,
 } from "./notionApi";
@@ -90,7 +90,7 @@ describe("Books API Routes", () => {
     const findSpy = vi
       .spyOn(NotionApi.prototype, "findBookPageByISBN")
       .mockResolvedValue(firstBookPage);
-    const tsSpy = vi.spyOn(TanshuApi.prototype, "getBookInfo");
+    const tsSpy = vi.spyOn(CacherApi.prototype, "getBookInfo");
     const createSpy = vi.spyOn(NotionApi.prototype, "createBookPage");
 
     const resp = await app.request(
@@ -110,7 +110,7 @@ describe("Books API Routes", () => {
       .spyOn(NotionApi.prototype, "findBookPageByISBN")
       .mockResolvedValue(null);
     const tsSpy = vi
-      .spyOn(TanshuApi.prototype, "getBookInfo")
+      .spyOn(CacherApi.prototype, "getBookInfo")
       .mockResolvedValue({ ok: true, data: tsBookData, error: null });
     const createSpy = vi
       .spyOn(NotionApi.prototype, "createBookPage")
@@ -135,7 +135,7 @@ describe("Books API Routes", () => {
       .spyOn(NotionApi.prototype, "findBookPageByISBN")
       .mockResolvedValue(null);
     const tsSpy = vi
-      .spyOn(TanshuApi.prototype, "getBookInfo")
+      .spyOn(CacherApi.prototype, "getBookInfo")
       .mockResolvedValue({ ok: false, data: null, error: "Remote error" });
     const createSpy = vi.spyOn(NotionApi.prototype, "createBookPage");
 

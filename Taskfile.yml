@@ -1,22 +1,42 @@
 # https://taskfile.dev/usage/
 version: '3'
+
+vars:
+  TEST_ONLY_ENV: "test only env in Taskfile.yml"
+dotenv:
+  # first over last? ENV=prod task hi
+  - .env.{{.ENV}}
+  # - .env.${ENV}
+  - .env
+
 tasks:
   default: bun run test
   dev: bun run dev
   repl: bun repl
+  rel: |
+    bun run test && bun run release
+    git push --follow-tags origin main
+    
+  rel-skip-ci: standard-version --skip.commit
 
-  books: |
-    curl -v -H "Authorization: Bearer dogoodjob" http://localhost:3000/books?pageSize=3 | jq
-  books-hi: |
-    curl -v -H "Authorization: Bearer dogoodjob" http://localhost:3000/books/hi | jq
-  book-post: |
-    # curl -X POST http://localhost:3000/isbn/9787115424914
-    curl -X POST http://localhost:3000/books/isbn/9787030758880
+  # env test
+  hi: |
+    echo "TEST_ONLY_ENV: {{.TEST_ONLY_ENV}}"
+    echo "TEST_ONLY_ENV: ${TEST_ONLY_ENV}"
 
   ## bun prod
   prod: |
     bun run build
     bun run dist/index.js
+
+  books: |
+    curl -v -H "Authorization: Bearer {{.BEARER_AUTH_TOKEN}}" {{.API_HOST}}/books?pageSize=3 | jq
+  books-hi: |
+    curl -v -H "Authorization: Bearer {{.BEARER_AUTH_TOKEN}}" {{.API_HOST}}/books/hi | jq
+  fill-books: |
+    bin/book export -d 1c4673e59ab681f4b64de4972526a88b 
+    sleep 2
+    bin/book import db/output/db-1bf673e59ab680e691c1fb7a62646902.json -e db/output/db-1c4673e59ab681f4b64de4972526a88b.json -d 1c4673e59ab681f4b64de4972526a88b
 
   ## Fly.io
   f-who: fly auth whoami
@@ -29,14 +49,14 @@ tasks:
   open: open https://notion-data-helper.shareup.workers.dev
   secrets: |
     bunx wrangler secret list
-    # bunx wrangler secret put BEARER_AUTH_TOKEN
+    # bunx wrangler secret put BEARER_BEARER_AUTH_TOKEN
 
   ## Tools
-  ping: curl -v http://localhost:3000/ping | jq
-  timing: curl -v http://localhost:3000/timing?delay=6 | jq
+  ping: curl -v {{.API_HOST}}/ping | jq
+  timing: curl -v {{.API_HOST}}/timing?delay=6 | jq
   test-env: |
-    curl http://localhost:3000/envs
-    curl -H "Authorization: Bearer dogoodjob" http://localhost:3000/envs | jq
+    curl {{.API_HOST}}/envs
+    curl -H "Authorization: Bearer {{.BEARER_AUTH_TOKEN}}" {{.API_HOST}}/envs | jq
   envs: 
     silent: true
     cmds: 

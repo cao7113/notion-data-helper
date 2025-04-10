@@ -19,6 +19,8 @@ node_modules/
 .env
 .env.production
 .dev.vars
+.env.*
+!.env.sample
 
 # logs
 logs/
@@ -35,3 +37,4 @@ lerna-debug.log*
 
 .*.local
 local*
+db/
